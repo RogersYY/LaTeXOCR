@@ -5,13 +5,21 @@
 //  Created by 颜家俊 on 2024/10/20.
 //
 
+
 import SwiftUI
 
 @main
 struct LaTeXOCRApp: App {
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
+    var body: some Scene{
+        Settings{
+            EmptyView()
         }
     }
+//    var body: some Scene {
+//        WindowGroup {
+//            ContentView()
+//        }
+//    }
 }

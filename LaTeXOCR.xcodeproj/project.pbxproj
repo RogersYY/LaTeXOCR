@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C7C08F7C2CDA1DC0005EDFBD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C08F7B2CDA1DC0005EDFBD /* AppDelegate.swift */; };
 		C7D48ABB2CC4D28E00BE2130 /* LaTeXOCRApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D48ABA2CC4D28E00BE2130 /* LaTeXOCRApp.swift */; };
 		C7D48ABD2CC4D28E00BE2130 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D48ABC2CC4D28E00BE2130 /* ContentView.swift */; };
 		C7D48ABF2CC4D29100BE2130 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C7D48ABE2CC4D29100BE2130 /* Assets.xcassets */; };
@@ -34,6 +35,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		C7C08F7B2CDA1DC0005EDFBD /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		C7C08F7D2CDA20F0005EDFBD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C7D48AB72CC4D28E00BE2130 /* LaTeXOCR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LaTeXOCR.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C7D48ABA2CC4D28E00BE2130 /* LaTeXOCRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaTeXOCRApp.swift; sourceTree = "<group>"; };
 		C7D48ABC2CC4D28E00BE2130 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -95,11 +98,13 @@
 		C7D48AB92CC4D28E00BE2130 /* LaTeXOCR */ = {
 			isa = PBXGroup;
 			children = (
+				C7C08F7D2CDA20F0005EDFBD /* Info.plist */,
 				C7D48ABA2CC4D28E00BE2130 /* LaTeXOCRApp.swift */,
 				C7D48ABC2CC4D28E00BE2130 /* ContentView.swift */,
 				C7D48ABE2CC4D29100BE2130 /* Assets.xcassets */,
 				C7D48AC32CC4D29100BE2130 /* LaTeXOCR.entitlements */,
 				C7D48AC02CC4D29100BE2130 /* Preview Content */,
+				C7C08F7B2CDA1DC0005EDFBD /* AppDelegate.swift */,
 			);
 			path = LaTeXOCR;
 			sourceTree = "<group>";
@@ -259,6 +264,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C7C08F7C2CDA1DC0005EDFBD /* AppDelegate.swift in Sources */,
 				C7D48ABD2CC4D28E00BE2130 /* ContentView.swift in Sources */,
 				C7D48ABB2CC4D28E00BE2130 /* LaTeXOCRApp.swift in Sources */,
 			);
@@ -420,6 +426,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = LaTeXOCR/LaTeXOCR.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -429,6 +436,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LaTeXOCR/Info.plist;
+				INFOPLIST_KEY_LSUIElement = NO;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -447,6 +456,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = LaTeXOCR/LaTeXOCR.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
@@ -456,6 +466,8 @@
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = LaTeXOCR/Info.plist;
+				INFOPLIST_KEY_LSUIElement = NO;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
