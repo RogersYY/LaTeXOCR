@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import WebKit
 
 struct ContentView: View {
     @State private var image: NSImage? = nil
@@ -16,33 +17,56 @@ struct ContentView: View {
     
     var body: some View {
         VStack {
-            // 显示图片区域
-            if let image = image {
-                Image(nsImage: image)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(height: 300)  // 可调整高度
-                    .frame(width: 600)
-            } else {
-                Rectangle()
-                    .fill(Color.gray)
-                    .frame(height: 300)
-                    .frame(width: 600)
-                    .overlay(Text("No Image Selected"))
-            }
-            
-            // 转换按钮
-            Button("Convert to LaTeX") {
-                convertImageToLatex()
+            // TOP SECTION - Split into left and right
+            HStack {
+                // Left side - Image display area
+                VStack {
+                    if let image = image {
+                        Image(nsImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(height: 300)
+                    } else {
+                        Rectangle()
+                            .fill(Color.gray)
+                            .frame(height: 300)
+                            .overlay(Text("No Image Selected"))
+                    }
+                }
+                .frame(width: 300)
+                .border(Color.gray)
+                .cornerRadius(4)
+                
+                // Right side - Empty area for future use
+                VStack {
+                    Text("公式预览")
+                        .font(.headline)
+                        .padding(.bottom, 5)
+                    
+                    // 这里不再指定固定宽度，允许KaTeXView自适应
+                    KaTeXView(latexFormula: latexFormula)
+                        .frame(height: 260)
+                }
+                .frame(minWidth: 200)
+                .cornerRadius(4)
             }
             .padding()
+            .cornerRadius(4)
             
-            // LaTeX公式输出区域
-            Text(latexFormula)
+            // BOTTOM SECTION
+            VStack {
+                Button("转换公式") {
+                    convertImageToLatex()
+                }
                 .padding()
-                .background(Color.white)
-                .frame(maxWidth: .infinity)
-                .border(Color.gray)
+                
+                TextField("输入或显示LaTeX公式", text: $latexFormula)
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
+                    .padding()
+                    .background(Color(.textBackgroundColor))
+                    .cornerRadius(4)
+            }
+            .padding()
         }
         .padding()
         .onAppear {
@@ -65,9 +89,9 @@ struct ContentView: View {
     }
     private func loginSCUNET(){
         guard let url = URL(string: "http://192.168.2.135/eportal/InterFace.do?method=login") else {
-                print("Invalid SCUNET URL")
-                return
-            }
+            print("Invalid SCUNET URL")
+            return
+        }
         // 定义请求
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -94,7 +118,7 @@ struct ContentView: View {
                 print("Error: \(error.localizedDescription)")
                 return
             }
-
+            
             // 检查响应数据
             if let data = data, let responseString = String(data: data, encoding: .utf8) {
                 print("Response: \(responseString)")
@@ -102,11 +126,11 @@ struct ContentView: View {
                 print("No response data received.")
             }
         }
-
+        
         // 启动任务
         task.resume()
         return
-
+        
     }
     
     private func startScreenshotProcess() {
@@ -254,6 +278,7 @@ struct ContentView: View {
         return resultString
     }
 }
+
 //#Preview {
 //    ContentView()
 //}

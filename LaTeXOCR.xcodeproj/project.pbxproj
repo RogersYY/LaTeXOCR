@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		C70819252DACBC7E00647AAF /* KaTexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70819242DACBC7E00647AAF /* KaTexView.swift */; };
+		C7710A9B2DACDD79000E70E5 /* MainBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7710A9A2DACDD79000E70E5 /* MainBoardView.swift */; };
+		C7710A9D2DACE18E000E70E5 /* IdentifyProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7710A9C2DACE18E000E70E5 /* IdentifyProcess.swift */; };
 		C7C08F7C2CDA1DC0005EDFBD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C08F7B2CDA1DC0005EDFBD /* AppDelegate.swift */; };
 		C7D48ABB2CC4D28E00BE2130 /* LaTeXOCRApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D48ABA2CC4D28E00BE2130 /* LaTeXOCRApp.swift */; };
 		C7D48ABD2CC4D28E00BE2130 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7D48ABC2CC4D28E00BE2130 /* ContentView.swift */; };
@@ -35,6 +38,9 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		C70819242DACBC7E00647AAF /* KaTexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaTexView.swift; sourceTree = "<group>"; };
+		C7710A9A2DACDD79000E70E5 /* MainBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainBoardView.swift; sourceTree = "<group>"; };
+		C7710A9C2DACE18E000E70E5 /* IdentifyProcess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentifyProcess.swift; sourceTree = "<group>"; };
 		C7C08F7B2CDA1DC0005EDFBD /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		C7C08F7D2CDA20F0005EDFBD /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		C7D48AB72CC4D28E00BE2130 /* LaTeXOCR.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LaTeXOCR.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -105,6 +111,9 @@
 				C7D48AC32CC4D29100BE2130 /* LaTeXOCR.entitlements */,
 				C7D48AC02CC4D29100BE2130 /* Preview Content */,
 				C7C08F7B2CDA1DC0005EDFBD /* AppDelegate.swift */,
+				C70819242DACBC7E00647AAF /* KaTexView.swift */,
+				C7710A9A2DACDD79000E70E5 /* MainBoardView.swift */,
+				C7710A9C2DACE18E000E70E5 /* IdentifyProcess.swift */,
 			);
 			path = LaTeXOCR;
 			sourceTree = "<group>";
@@ -265,7 +274,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				C7C08F7C2CDA1DC0005EDFBD /* AppDelegate.swift in Sources */,
+				C7710A9D2DACE18E000E70E5 /* IdentifyProcess.swift in Sources */,
 				C7D48ABD2CC4D28E00BE2130 /* ContentView.swift in Sources */,
+				C70819252DACBC7E00647AAF /* KaTexView.swift in Sources */,
+				C7710A9B2DACDD79000E70E5 /* MainBoardView.swift in Sources */,
 				C7D48ABB2CC4D28E00BE2130 /* LaTeXOCRApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

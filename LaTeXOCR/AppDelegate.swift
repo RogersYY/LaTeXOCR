@@ -22,7 +22,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.image=NSImage(systemSymbolName: "function", accessibilityDescription: "LaTeX OCR")
         // 状态栏功能列表
         setupMeauList()
-
+        
         // 设置主窗口
         setupMainWindow()
         
@@ -31,7 +31,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     func setupMainWindow() {
-        let contentView = ContentView()
+        //        let contentView = ContentView()
+        let contentView = MainBoardView()
         let hostingController = NSHostingController(rootView: contentView)
         
         contentWindow = NSWindow(
@@ -46,41 +47,42 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         contentWindow?.makeKeyAndOrderFront(nil)
         contentWindow?.isReleasedWhenClosed = false  // 重要：防止窗口关闭时被释放
     }
+    
     func setupMeauList() {
         let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "功能1", 
-                              action: #selector(function1(_:)), 
-                              keyEquivalent: ""))
-        menu.addItem(NSMenuItem(title: "功能2", 
-                              action: #selector(function2(_:)), 
-                              keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "功能1",
+                                action: #selector(function1(_:)),
+                                keyEquivalent: ""))
+        menu.addItem(NSMenuItem(title: "功能2",
+                                action: #selector(function2(_:)),
+                                keyEquivalent: ""))
         // 3. 添加分割线
         menu.addItem(NSMenuItem.separator())
         // 4. 带子菜单的菜单项
         let submenu = NSMenu()
-        submenu.addItem(NSMenuItem(title: "子功能1", 
-                                 action: #selector(subFunction1(_:)), 
-                                 keyEquivalent: ""))
-        submenu.addItem(NSMenuItem(title: "子功能2", 
-                                 action: #selector(subFunction2(_:)), 
-                                 keyEquivalent: ""))
+        submenu.addItem(NSMenuItem(title: "子功能1",
+                                   action: #selector(subFunction1(_:)),
+                                   keyEquivalent: ""))
+        submenu.addItem(NSMenuItem(title: "子功能2",
+                                   action: #selector(subFunction2(_:)),
+                                   keyEquivalent: ""))
         
-        let subMenuItem = NSMenuItem(title: "更多功能", 
-                                   action: nil, 
-                                   keyEquivalent: "")
+        let subMenuItem = NSMenuItem(title: "更多功能",
+                                     action: nil,
+                                     keyEquivalent: "")
         subMenuItem.submenu = submenu
         menu.addItem(subMenuItem)
         
         // 5. 退出程序的菜单项
         menu.addItem(NSMenuItem.separator())
-        menu.addItem(NSMenuItem(title: "退出", 
-                              action: #selector(NSApplication.terminate(_:)), 
-                              keyEquivalent: "q"))
+        menu.addItem(NSMenuItem(title: "退出",
+                                action: #selector(NSApplication.terminate(_:)),
+                                keyEquivalent: "q"))
         
         // 将菜单设置给状态栏项
         statusItem.menu = menu
     }
-
+    
     // 菜单项对应的动作方法
     @objc func function1(_ sender: Any?) {
         print("功能1被点击")
@@ -111,16 +113,16 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupGlobalMonitor() {
         NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
             if event.modifierFlags.contains(.command) &&
-               event.modifierFlags.contains(.shift) &&
-               event.keyCode == 0 /* A key */ {
+                event.modifierFlags.contains(.shift) &&
+                event.keyCode == 0 /* A key */ {
                 // 触发截图
                 NotificationCenter.default.post(name: Notification.Name("TriggerScreenshot"), object: nil)
             }
             if  event.modifierFlags.contains(.command) &&
-                event.modifierFlags.contains(.shift) &&
-                event.keyCode == 18 /* 1 key */ {
-                    // 自动登录校园网
-                    NotificationCenter.default.post(name: Notification.Name("TriggerCampusLogin"), object: nil)
+                    event.modifierFlags.contains(.shift) &&
+                    event.keyCode == 18 /* 1 key */ {
+                // 自动登录校园网
+                NotificationCenter.default.post(name: Notification.Name("TriggerCampusLogin"), object: nil)
             }
         }
     }
