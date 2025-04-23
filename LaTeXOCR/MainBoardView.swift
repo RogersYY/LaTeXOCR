@@ -8,10 +8,10 @@
 import SwiftUI
 
 struct MainBoardView: View {
-//    @State private var image: NSImage? = nil
+    //    @State private var image: NSImage? = nil
     //    @State private var latexFormula: String = ""
-//    @State private var savedImageURL: URL? // New state to store the URL of the saved image
-//    @State private var image_base64String: String = "" // 新增状态变量存储Base64编码字符串
+    //    @State private var savedImageURL: URL? // New state to store the URL of the saved image
+    //    @State private var image_base64String: String = "" // 新增状态变量存储Base64编码字符串
     // 添加 IdentifyProcess 实例
     @StateObject private var identifyProcess = IdentifyProcess()
     
@@ -40,8 +40,12 @@ struct MainBoardView: View {
                         .font(.headline)
                         .padding(.bottom, 5)
                     
-                    KaTeXView(latexFormula: identifyProcess.latexFormula)
-                        .frame(minHeight: 100, maxHeight: 300)
+                    // KaTeXView(latexFormula: identifyProcess.latexFormula)
+                    //     .frame(minHeight: 100, maxHeight: 300)
+                    KaTeXView(latexFormula: identifyProcess.latexFormula) { mathML in
+                        // 在这里处理 MathML
+                        identifyProcess.mathmlFormula = mathML
+                    }.frame(minHeight: 100, maxHeight: 300)
                 }
                 .frame(minWidth: 200)
                 .cornerRadius(4)
@@ -51,9 +55,17 @@ struct MainBoardView: View {
             
             // BOTTOM SECTION
             VStack {
-                Button("复制LaTeX") {
-                    identifyProcess.copyLatexCode()
+                HStack {
+                    Button("复制LaTeX") {
+                        identifyProcess.copyLatexCode()
+                    }
+                    Button("复制MathML(Word)") {
+                        identifyProcess.copyFormulaCode(copyFormula:"mathml")
+                    }
                 }
+                // Button("复制LaTeX") {
+                //     identifyProcess.copyLatexCode()
+                // }
                 .padding()
                 TextEditor(text: $identifyProcess.latexFormula)
                     .font(.system(size: 14, weight: .regular, design: .monospaced))
@@ -88,6 +100,6 @@ struct MainBoardView: View {
     }
 }
 
-//#Preview {
-//    MainBoardView()
-//}
+#Preview {
+    MainBoardView()
+}

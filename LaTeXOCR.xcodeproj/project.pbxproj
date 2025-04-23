@@ -81,6 +81,13 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		C7816AC82DAF79B500B01587 /* Assets */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Assets;
+			sourceTree = "<group>";
+		};
 		C7D48AAE2CC4D28E00BE2130 = {
 			isa = PBXGroup;
 			children = (
@@ -104,6 +111,7 @@
 		C7D48AB92CC4D28E00BE2130 /* LaTeXOCR */ = {
 			isa = PBXGroup;
 			children = (
+				C7816AC82DAF79B500B01587 /* Assets */,
 				C7C08F7D2CDA20F0005EDFBD /* Info.plist */,
 				C7D48ABA2CC4D28E00BE2130 /* LaTeXOCRApp.swift */,
 				C7D48ABC2CC4D28E00BE2130 /* ContentView.swift */,

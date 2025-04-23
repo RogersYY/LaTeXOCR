@@ -12,15 +12,28 @@ import SwiftUI
 class IdentifyProcess: ObservableObject {
     // 可观察属性
     @Published var latexFormula: String = ""
+    @Published var mathmlFormula: String = ""
     @Published private(set) var image: NSImage? = nil
     
     private var savedImageURL: URL? // New state to store the URL of the saved image
     private var image_base64String: String = "" // 新增状态变量存储Base64编码字符串
+    private var defaultFormulaFormat: String = "latex" //mathml
     
     
     func copyLatexCode() {
         NSPasteboard.general.clearContents()
         NSPasteboard.general.setString(self.latexFormula, forType: .string)
+        // 复制到剪贴板后，让程序图标跳动一下提示用户
+        NSApp.requestUserAttention(.informationalRequest)
+    }
+    func copyFormulaCode(copyFormula:String) {
+        let formatToUse = copyFormula.isEmpty ? self.defaultFormulaFormat : copyFormula
+        NSPasteboard.general.clearContents()
+        if formatToUse == "latex" {
+            NSPasteboard.general.setString(self.latexFormula, forType: .string)
+        }else if formatToUse == "mathml" {
+            NSPasteboard.general.setString(self.mathmlFormula, forType:.string)
+        }
         // 复制到剪贴板后，让程序图标跳动一下提示用户
         NSApp.requestUserAttention(.informationalRequest)
     }

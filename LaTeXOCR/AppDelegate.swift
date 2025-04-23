@@ -13,21 +13,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var contentWindow: NSWindow?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 创建状态栏图标
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-        // if let button = statusItem.button {
-        //     button.image = NSImage(systemSymbolName: "function", accessibilityDescription: "LaTeX OCR")
-        //     button.action = #selector(togglePopover(_:))
-        // }
-        statusItem.button?.image=NSImage(systemSymbolName: "function", accessibilityDescription: "LaTeX OCR")
-        // 状态栏功能列表
-        setupMeauList()
+              // 创建状态栏图标
+              statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+              // if let button = statusItem.button {
+              //     button.image = NSImage(systemSymbolName: "function", accessibilityDescription: "LaTeX OCR")
+              //     button.action = #selector(togglePopover(_:))
+              // }
+              statusItem.button?.image=NSImage(systemSymbolName: "function", accessibilityDescription: "LaTeX OCR")
+              // 状态栏功能列表
+              setupMeauList()
         
-        // 设置主窗口
-        setupMainWindow()
+              // 设置主窗口
+              setupMainWindow()
         
-        // 设置全局事件监听
-        setupGlobalMonitor()
+              // 设置全局事件监听
+              setupGlobalMonitor()
     }
     
     func setupMainWindow() {
