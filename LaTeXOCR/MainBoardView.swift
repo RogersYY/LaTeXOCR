@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import WebKit
 
 struct MainBoardView: View {
     //    @State private var image: NSImage? = nil
@@ -43,9 +44,10 @@ struct MainBoardView: View {
                     // KaTeXView(latexFormula: identifyProcess.latexFormula)
                     //     .frame(minHeight: 100, maxHeight: 300)
                     KaTeXView(latexFormula: identifyProcess.latexFormula) { mathML in
-                        // 在这里处理 MathML
+                        // 只在主动请求时赋值
                         identifyProcess.mathmlFormula = mathML
-                    }.frame(minHeight: 100, maxHeight: 300)
+                    }
+                    .frame(minHeight: 100, maxHeight: 300)
                 }
                 .frame(minWidth: 200)
                 .cornerRadius(4)
@@ -60,7 +62,7 @@ struct MainBoardView: View {
                         identifyProcess.copyLatexCode()
                     }
                     Button("复制MathML(Word)") {
-                        identifyProcess.copyFormulaCode(copyFormula:"mathml")
+                        // 主动请求MathML
                     }
                 }
                 // Button("复制LaTeX") {

@@ -19,15 +19,28 @@ struct KaTeXView: NSViewRepresentable {
     
     class Coordinator: NSObject, WKScriptMessageHandler {
         var parent: KaTeXView
+        var webView: WKWebView? // 保存webView的引用
         
         init(_ parent: KaTeXView) {
             self.parent = parent
         }
-        
-        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            if message.name == "mathMLHandler", let mathML = message.body as? String {
-                parent.onMathMLReceived?(mathML)
+
+        // 主动请求MathML
+        func requestMathML() {
+            webView?.evaluateJavaScript("window.getMathML && window.getMathML()") { result, error in
+                if let mathML = result as? String {
+                    self.parent.onMathMLReceived?(mathML)
+                }
             }
+        }
+        
+        // func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        //     if message.name == "mathMLHandler", let mathML = message.body as? String {
+        //         parent.onMathMLReceived?(mathML)
+        //     }
+        // }
+        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+            // 不再自动回调
         }
     }
     
@@ -43,6 +56,8 @@ struct KaTeXView: NSViewRepresentable {
         webView.autoresizingMask = [.width, .height]
         webView.translatesAutoresizingMaskIntoConstraints = true
         
+        context.coordinator.webView = webView // 保存webView的引用
+
         return webView
     }
     
@@ -129,11 +144,16 @@ struct KaTeXView: NSViewRepresentable {
                         output: "mathml",
                         throwOnError: false
                     });
-                    let pureMathML = extractPureMathML(mathmlcode);
-                    window.webkit.messageHandlers.mathMLHandler.postMessage(pureMathML);
+                    // 新增: 暴露getMathML方法
+                    window.getMathML = function() {
+                        let pureMathML = extractPureMathML(mathmlcode);
+                        return pureMathML;
+                    };
                 } catch (e) {
                     document.getElementById("formula").innerHTML = "公式错误: " + e.message;
-                    window.webkit.messageHandlers.mathMLHandler.postMessage(null);
+                    window.getMathML = function() {
+                        return null;
+                    };
                 }
             </script>
         </body>

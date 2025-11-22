@@ -217,7 +217,6 @@ class IdentifyProcess: ObservableObject {
         }
         return pngData.base64EncodedString(options: .lineLength64Characters)
     }
-    
     func convertImageToLatex() {
         // OCR到LaTeX转换的虚拟实现
         let result = ocrFormulaToLatex(imageBase64: self.image_base64String)
@@ -227,5 +226,12 @@ class IdentifyProcess: ObservableObject {
         
         // 复制到剪贴板后，图标跳动一下
         NSApp.requestUserAttention(.informationalRequest)
+    }
+    
+    // 直接调用requestMathML函数并更新mathmlFormula变量
+    func requestAndUpdateMathML(coordinator: KaTeXView.Coordinator) {
+        coordinator.requestMathML()
+        // 注意：实际的mathmlFormula更新是在KaTeXView的回调中完成的
+        // 该方法只是触发了requestMathML的调用
     }
 }
