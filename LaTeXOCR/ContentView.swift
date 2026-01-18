@@ -44,7 +44,7 @@ struct ContentView: View {
                         .padding(.bottom, 5)
                     
                     // 这里不再指定固定宽度，允许KaTeXView自适应
-                    KaTeXView(latexFormula: latexFormula)
+                    KaTeXView(latexFormula: latexFormula, requestToken: 0)
                         .frame(height: 260)
                 }
                 .frame(minWidth: 200)
@@ -78,59 +78,7 @@ struct ContentView: View {
             ) { _ in
                 startScreenshotProcess()
             }
-            NotificationCenter.default.addObserver(
-                forName: Notification.Name("TriggerCampusLogin"),
-                object: nil,
-                queue: .main
-            ) { _ in
-                loginSCUNET()
-            }
         }
-    }
-    private func loginSCUNET(){
-        guard let url = URL(string: "http://192.168.2.135/eportal/InterFace.do?method=login") else {
-            print("Invalid SCUNET URL")
-            return
-        }
-        // 定义请求
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        
-        // 定义请求体
-        let parameters: [String: String] = [
-            "userId": "2023323040027",
-            "password": "151836",
-            "service": "internet",
-            "queryString": "wlanuserip%3D1d203eecf62c8bb2ea695a7c92b03797%26wlanacname%3Dc71e94097544a7685edbb05cfb9628ae%26ssid%3D%26nasip%3Dd7a73fb5c210304203a602216e5d5e4e%26snmpagentip%3D%26mac%3Dc90ab37f2b3815ad0553ce7da940cd45%26t%3Dwireless-v2%26url%3Dc862a5edcc190c2edb16650375e6ef4e9108e97851c24226%26apmac%3D%26nasid%3Dc71e94097544a7685edbb05cfb9628ae%26vid%3Da52ba08d90c6999c%26port%3D41d73e29c1aa12a4%26nasportid%3D311e2b5a2ef217b48e5e93f1ce76a36c309ca59add64f2060c68f0bf7ec4ab80",
-            "operatorPwd": "",
-            "operatorUserId": "",
-            "validcode": "",
-            "passwordEncrypt": "false"
-        ]
-        let postData = parameters.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
-        request.httpBody = postData.data(using: .utf8)
-        // 创建 URLSession
-        let session = URLSession.shared
-        // 发送请求
-        let task = session.dataTask(with: request) { data, response, error in
-            // 检查错误
-            if let error = error {
-                print("Error: \(error.localizedDescription)")
-                return
-            }
-            
-            // 检查响应数据
-            if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                print("Response: \(responseString)")
-            } else {
-                print("No response data received.")
-            }
-        }
-        
-        // 启动任务
-        task.resume()
-        return
-        
     }
     
     private func startScreenshotProcess() {
@@ -197,6 +145,10 @@ struct ContentView: View {
         let result = ocrFormulaToLatex(imageBase64: self.image_base64String)
         self.latexFormula = result
         NSPasteboard.general.clearContents()
+        let formatToUse = preferredCopyFormat()
+        if formatToUse == "mathml" {
+            print("MathML copy not available in ContentView; falling back to LaTeX.")
+        }
         NSPasteboard.general.setString(result, forType: .string)
         
         // 复制到剪贴板后，图标跳动一下
@@ -208,20 +160,36 @@ struct ContentView: View {
         let regex = try! NSRegularExpression(pattern: pattern, options: [])
         let range = NSRange(string.startIndex..., in: string)
         let cleanedString = regex.stringByReplacingMatches(in: string, options: [], range: range, withTemplate: "")
-        return cleanedString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = cleanedString.trimmingCharacters(in: .whitespacesAndNewlines)
+        return stripDisplayMathDelimiters(from: trimmed)
+    }
+    
+    private func stripDisplayMathDelimiters(from string: String) -> String {
+        if string.hasPrefix("\\[") && string.hasSuffix("\\]") {
+            let start = string.index(string.startIndex, offsetBy: 2)
+            let end = string.index(string.endIndex, offsetBy: -2)
+            return String(string[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        if string.hasPrefix("$$") && string.hasSuffix("$$") {
+            let start = string.index(string.startIndex, offsetBy: 2)
+            let end = string.index(string.endIndex, offsetBy: -2)
+            return String(string[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return string
     }
     
     func ocrFormulaToLatex(imageBase64: String) -> String {
-        let url = URL(string: "https://api.openai-hub.com/v1/chat/completions")!
-        let apiKey = "sk-xMa3WlXiznsdngEYVjnGGU0hY3uAt2uy2RZ5V99sVXlIF7ek"
+        guard let config = loadAPIConfig() else {
+            return ""
+        }
         
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: config.url)
         request.httpMethod = "POST"
-        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.addValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let requestBody: [String: Any] = [
-            "model": "gpt-4o-2024-11-20",
+            "model": config.model,
             "messages": [
                 [
                     "role": "user",
@@ -276,6 +244,41 @@ struct ContentView: View {
         semaphore.wait()
         
         return resultString
+    }
+
+    private func loadAPIConfig() -> (url: URL, apiKey: String, model: String)? {
+        let urlString = UserDefaults.standard.string(forKey: "apiBaseURL")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let apiKey = UserDefaults.standard.string(forKey: "apiKey")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let selectedModel = UserDefaults.standard.string(forKey: "apiModel")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "gpt-5.2"
+        let customModel = UserDefaults.standard.string(forKey: "apiModelCustom")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let model = selectedModel == "其他" ? customModel : selectedModel
+        
+        guard !urlString.isEmpty, !apiKey.isEmpty else {
+            print("Missing API settings. Please configure them in Settings.")
+            return nil
+        }
+        
+        if model.isEmpty {
+            print("Missing model setting. Please configure it in Settings.")
+            return nil
+        }
+        
+        guard let url = URL(string: urlString) else {
+            print("Invalid API URL in Settings.")
+            return nil
+        }
+        
+        return (url, apiKey, model)
+    }
+    
+    private func preferredCopyFormat() -> String {
+        let format = UserDefaults.standard.string(forKey: "copyFormat")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "latex"
+        return format.isEmpty ? "latex" : format
     }
 }
 

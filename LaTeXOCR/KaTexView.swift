@@ -11,15 +11,19 @@ import SwiftUI
 // KaTeX 视图实现
 struct KaTeXView: NSViewRepresentable {
     var latexFormula: String
+    var requestToken: Int
     var onMathMLReceived: ((String) -> Void)? // 添加回调属性
     
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
     
-    class Coordinator: NSObject, WKScriptMessageHandler {
+    class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         var parent: KaTeXView
         var webView: WKWebView? // 保存webView的引用
+        var lastRequestToken: Int = 0
+        var pendingRequest: Bool = false
+        var lastRenderedFormula: String = ""
         
         init(_ parent: KaTeXView) {
             self.parent = parent
@@ -42,6 +46,15 @@ struct KaTeXView: NSViewRepresentable {
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             // 不再自动回调
         }
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            if pendingRequest {
+                pendingRequest = false
+                requestMathML()
+                return
+            }
+            requestMathML()
+        }
     }
     
     func makeNSView(context: Context) -> WKWebView {
@@ -52,6 +65,7 @@ struct KaTeXView: NSViewRepresentable {
         
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")
+        webView.navigationDelegate = context.coordinator
         
         webView.autoresizingMask = [.width, .height]
         webView.translatesAutoresizingMaskIntoConstraints = true
@@ -62,6 +76,20 @@ struct KaTeXView: NSViewRepresentable {
     }
     
     func updateNSView(_ webView: WKWebView, context: Context) {
+        if requestToken != context.coordinator.lastRequestToken {
+            context.coordinator.lastRequestToken = requestToken
+            if webView.isLoading {
+                context.coordinator.pendingRequest = true
+            } else {
+                context.coordinator.requestMathML()
+            }
+        }
+        
+        guard latexFormula != context.coordinator.lastRenderedFormula else {
+            return
+        }
+        context.coordinator.lastRenderedFormula = latexFormula
+        
         let escapedFormula = latexFormula.replacingOccurrences(of: "\\", with: "\\\\")
             .replacingOccurrences(of: "\"", with: "\\\"")
         
@@ -87,11 +115,15 @@ struct KaTeXView: NSViewRepresentable {
                     padding: 10px;
                     box-sizing: border-box;
                     text-align: center;
+                    color: #ffffff;
                 }
                 .katex-display {
                     margin: 0;
                     display: flex;
                     justify-content: center;
+                }
+                .katex {
+                    color: #ffffff;
                 }
             </style>
         </head>

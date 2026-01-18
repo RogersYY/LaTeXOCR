@@ -15,6 +15,7 @@ struct MainBoardView: View {
     //    @State private var image_base64String: String = "" // 新增状态变量存储Base64编码字符串
     // 添加 IdentifyProcess 实例
     @StateObject private var identifyProcess = IdentifyProcess()
+    @State private var mathMLRequestToken: Int = 0
     
     var body: some View {
         VStack {
@@ -43,9 +44,15 @@ struct MainBoardView: View {
                     
                     // KaTeXView(latexFormula: identifyProcess.latexFormula)
                     //     .frame(minHeight: 100, maxHeight: 300)
-                    KaTeXView(latexFormula: identifyProcess.latexFormula) { mathML in
-                        // 只在主动请求时赋值
-                        identifyProcess.mathmlFormula = mathML
+                    ZStack(alignment: .bottom) {
+                        KaTeXView(latexFormula: identifyProcess.latexFormula, requestToken: mathMLRequestToken) { mathML in
+                            identifyProcess.mathmlFormula = mathML
+                            identifyProcess.completeMathMLCopyIfNeeded()
+                        }
+                        if identifyProcess.isLoading {
+                            ProgressView("识别中...")
+                                .padding(.bottom, 6)
+                        }
                     }
                     .frame(minHeight: 100, maxHeight: 300)
                 }
@@ -59,16 +66,32 @@ struct MainBoardView: View {
             VStack {
                 HStack {
                     Button("复制LaTeX") {
-                        identifyProcess.copyLatexCode()
+                        identifyProcess.copyLatexWithFeedback()
                     }
-                    Button("复制MathML(Word)") {
-                        // 主动请求MathML
+                    Button("复制MathML(word)") {
+                        if identifyProcess.latexFormula.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            identifyProcess.showCopyFeedback("暂无公式可复制")
+                            return
+                        }
+                        if identifyProcess.mathmlFormula.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            identifyProcess.pendingMathMLCopy = true
+                            identifyProcess.pendingCopyFeedback = true
+                            identifyProcess.showCopyFeedback("生成 MathML...")
+                            mathMLRequestToken += 1
+                        } else {
+                            let success = identifyProcess.copyFormulaCode(copyFormula: "mathml")
+                            identifyProcess.showCopyFeedback(success ? "已复制 MathML(word)" : "复制失败")
+                        }
                     }
                 }
                 // Button("复制LaTeX") {
                 //     identifyProcess.copyLatexCode()
                 // }
                 .padding()
+                Text(identifyProcess.copyFeedbackMessage.isEmpty ? " " : identifyProcess.copyFeedbackMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.green)
+                    .frame(height: 16)
                 TextEditor(text: $identifyProcess.latexFormula)
                     .font(.system(size: 14, weight: .regular, design: .monospaced))
                     .frame(minHeight: 50, maxHeight: .infinity)
@@ -80,7 +103,7 @@ struct MainBoardView: View {
             }
             .padding()
         }
-        .frame(width:700)
+        .frame(minWidth: 700, minHeight: 400)
         .padding()
         .onAppear {
             // 监听截图通知
@@ -90,13 +113,6 @@ struct MainBoardView: View {
                 queue: .main
             ) { _ in
                 identifyProcess.startScreenshotProcess()
-            }
-            NotificationCenter.default.addObserver(
-                forName: Notification.Name("TriggerCampusLogin"),
-                object: nil,
-                queue: .main
-            ) { _ in
-                identifyProcess.loginSCUNET()
             }
         }
     }

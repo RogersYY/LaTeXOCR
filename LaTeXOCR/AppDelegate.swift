@@ -46,6 +46,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         contentWindow?.contentViewController = hostingController
         contentWindow?.makeKeyAndOrderFront(nil)
         contentWindow?.isReleasedWhenClosed = false  // 重要：防止窗口关闭时被释放
+        contentWindow?.minSize = NSSize(width: 700, height: 400)
     }
     
     func setupMeauList() {
@@ -72,6 +73,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                                      keyEquivalent: "")
         subMenuItem.submenu = submenu
         menu.addItem(subMenuItem)
+        
+        menu.addItem(NSMenuItem.separator())
+        menu.addItem(NSMenuItem(title: "设置",
+                                action: #selector(openSettings(_:)),
+                                keyEquivalent: ","))
         
         // 5. 退出程序的菜单项
         menu.addItem(NSMenuItem.separator())
@@ -100,6 +106,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         print("子功能2被点击")
     }
     
+    @objc func openSettings(_ sender: Any?) {
+        if #available(macOS 13.0, *) {
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: sender)
+        } else {
+            NSApp.sendAction(Selector(("showPreferencesWindow:")), to: nil, from: sender)
+        }
+    }
+    
     @objc func togglePopover(_ sender: Any?) {
         if let contentWindow = contentWindow {
             if contentWindow.isVisible {
@@ -111,19 +125,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func setupGlobalMonitor() {
-        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+        let handler: (NSEvent) -> Void = { event in
             if event.modifierFlags.contains(.command) &&
                 event.modifierFlags.contains(.shift) &&
                 event.keyCode == 0 /* A key */ {
                 // 触发截图
                 NotificationCenter.default.post(name: Notification.Name("TriggerScreenshot"), object: nil)
             }
-            if  event.modifierFlags.contains(.command) &&
-                    event.modifierFlags.contains(.shift) &&
-                    event.keyCode == 18 /* 1 key */ {
-                // 自动登录校园网
-                NotificationCenter.default.post(name: Notification.Name("TriggerCampusLogin"), object: nil)
-            }
+        }
+        
+        NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { event in
+            handler(event)
+        }
+        NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            handler(event)
+            return event
         }
     }
     

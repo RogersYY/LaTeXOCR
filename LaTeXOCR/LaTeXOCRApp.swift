@@ -14,7 +14,7 @@ struct LaTeXOCRApp: App {
     
     var body: some Scene{
         Settings{
-            EmptyView()
+            SettingsView()
         }
     }
 //    var body: some Scene {

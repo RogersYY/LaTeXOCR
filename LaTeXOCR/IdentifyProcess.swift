@@ -14,41 +14,56 @@ class IdentifyProcess: ObservableObject {
     @Published var latexFormula: String = ""
     @Published var mathmlFormula: String = ""
     @Published private(set) var image: NSImage? = nil
+    @Published var isLoading: Bool = false
+    @Published var pendingMathMLCopy: Bool = false
+    @Published var pendingCopyFeedback: Bool = false
+    @Published var copyFeedbackMessage: String = ""
+    private var copyFeedbackWorkItem: DispatchWorkItem?
     
     private var savedImageURL: URL? // New state to store the URL of the saved image
     private var image_base64String: String = "" // 新增状态变量存储Base64编码字符串
-    private var defaultFormulaFormat: String = "latex" //mathml
-    
-    
+
     func copyLatexCode() {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(self.latexFormula, forType: .string)
+        _ = copyStringToPasteboard(self.latexFormula, isMathML: false)
         // 复制到剪贴板后，让程序图标跳动一下提示用户
         NSApp.requestUserAttention(.informationalRequest)
     }
-    func copyFormulaCode(copyFormula:String) {
-        let formatToUse = copyFormula.isEmpty ? self.defaultFormulaFormat : copyFormula
-        NSPasteboard.general.clearContents()
+    
+    func copyLatexWithFeedback() {
+        if latexFormula.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            showCopyFeedback("暂无公式可复制")
+            return
+        }
+        if copyFormulaCode(copyFormula: "latex") {
+            showCopyFeedback("已复制 LaTeX")
+        } else {
+            showCopyFeedback("复制失败")
+        }
+    }
+    func copyFormulaCode(copyFormula:String) -> Bool {
+        let formatToUse = copyFormula.isEmpty ? preferredCopyFormat() : copyFormula
         if formatToUse == "latex" {
-            NSPasteboard.general.setString(self.latexFormula, forType: .string)
+            return copyStringToPasteboard(self.latexFormula, isMathML: false)
         }else if formatToUse == "mathml" {
-            NSPasteboard.general.setString(self.mathmlFormula, forType:.string)
+            return copyStringToPasteboard(self.mathmlFormula, isMathML: true)
         }
         // 复制到剪贴板后，让程序图标跳动一下提示用户
         NSApp.requestUserAttention(.informationalRequest)
+        return false
     }
     
     func ocrFormulaToLatex(imageBase64: String) -> String {
-        let url = URL(string: "https://api.openai-hub.com/v1/chat/completions")!
-        let apiKey = "sk-xMa3WlXiznsdngEYVjnGGU0hY3uAt2uy2RZ5V99sVXlIF7ek"
+        guard let config = loadAPIConfig() else {
+            return "Missing API settings. Please configure them in Settings."
+        }
         
-        var request = URLRequest(url: url)
+        var request = URLRequest(url: config.url)
         request.httpMethod = "POST"
-        request.addValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.addValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
         let requestBody: [String: Any] = [
-            "model": "gpt-4o-2024-11-20",
+            "model": config.model,
             "messages": [
                 [
                     "role": "user",
@@ -77,25 +92,43 @@ class IdentifyProcess: ObservableObject {
             defer { semaphore.signal() }
             
             if let error = error {
-                print("Error: \(error.localizedDescription)")
+                let message = "Network error: \(error.localizedDescription)"
+                print(message)
+                resultString = message
                 return
             }
             
             guard let data = data else {
-                print("No data received")
+                let message = "No data received from API."
+                print(message)
+                resultString = message
                 return
             }
             
             do {
+                if let httpResponse = response as? HTTPURLResponse,
+                   !(200...299).contains(httpResponse.statusCode) {
+                    let body = String(data: data, encoding: .utf8) ?? ""
+                    let message = "API error (\(httpResponse.statusCode)): \(body)"
+                    print(message)
+                    resultString = message
+                    return
+                }
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
                    let choices = json["choices"] as? [[String: Any]],
                    let firstChoice = choices.first,
                    let message = firstChoice["message"] as? [String: Any],
                    let content = message["content"] as? String {
                     resultString = self.removeLatexMarkers(from: content)
+                } else {
+                    let message = "Unexpected API response."
+                    print(message)
+                    resultString = message
                 }
             } catch {
-                print("JSON parsing error: \(error.localizedDescription)")
+                let message = "JSON parsing error: \(error.localizedDescription)"
+                print(message)
+                resultString = message
             }
         }
         
@@ -110,53 +143,51 @@ class IdentifyProcess: ObservableObject {
         let regex = try! NSRegularExpression(pattern: pattern, options: [])
         let range = NSRange(string.startIndex..., in: string)
         let cleanedString = regex.stringByReplacingMatches(in: string, options: [], range: range, withTemplate: "")
-        return cleanedString.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = cleanedString.trimmingCharacters(in: .whitespacesAndNewlines)
+        return stripDisplayMathDelimiters(from: trimmed)
     }
     
-    func loginSCUNET(){
-        guard let url = URL(string: "http://192.168.2.135/eportal/InterFace.do?method=login") else {
-            print("Invalid SCUNET URL")
-            return
+    private func stripDisplayMathDelimiters(from string: String) -> String {
+        if string.hasPrefix("\\[") && string.hasSuffix("\\]") {
+            let start = string.index(string.startIndex, offsetBy: 2)
+            let end = string.index(string.endIndex, offsetBy: -2)
+            return String(string[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
         }
-        // 定义请求
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
+        if string.hasPrefix("$$") && string.hasSuffix("$$") {
+            let start = string.index(string.startIndex, offsetBy: 2)
+            let end = string.index(string.endIndex, offsetBy: -2)
+            return String(string[start..<end]).trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return string
+    }
+    
+    private func loadAPIConfig() -> (url: URL, apiKey: String, model: String)? {
+        let urlString = UserDefaults.standard.string(forKey: "apiBaseURL")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let apiKey = UserDefaults.standard.string(forKey: "apiKey")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let selectedModel = UserDefaults.standard.string(forKey: "apiModel")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "gpt-5.2"
+        let customModel = UserDefaults.standard.string(forKey: "apiModelCustom")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let model = selectedModel == "其他" ? customModel : selectedModel
         
-        // 定义请求体
-        let parameters: [String: String] = [
-            "userId": "2023323040027",
-            "password": "151836",
-            "service": "internet",
-            "queryString": "wlanuserip%3D1d203eecf62c8bb2ea695a7c92b03797%26wlanacname%3Dc71e94097544a7685edbb05cfb9628ae%26ssid%3D%26nasip%3Dd7a73fb5c210304203a602216e5d5e4e%26snmpagentip%3D%26mac%3Dc90ab37f2b3815ad0553ce7da940cd45%26t%3Dwireless-v2%26url%3Dc862a5edcc190c2edb16650375e6ef4e9108e97851c24226%26apmac%3D%26nasid%3Dc71e94097544a7685edbb05cfb9628ae%26vid%3Da52ba08d90c6999c%26port%3D41d73e29c1aa12a4%26nasportid%3D311e2b5a2ef217b48e5e93f1ce76a36c309ca59add64f2060c68f0bf7ec4ab80",
-            "operatorPwd": "",
-            "operatorUserId": "",
-            "validcode": "",
-            "passwordEncrypt": "false"
-        ]
-        let postData = parameters.map { "\($0.key)=\($0.value)" }.joined(separator: "&")
-        request.httpBody = postData.data(using: .utf8)
-        // 创建 URLSession
-        let session = URLSession.shared
-        // 发送请求
-        let task = session.dataTask(with: request) { data, response, error in
-            // 检查错误
-            if let error = error {
-                print("Error: \(error.localizedDescription)")
-                return
-            }
-            
-            // 检查响应数据
-            if let data = data, let responseString = String(data: data, encoding: .utf8) {
-                print("Response: \(responseString)")
-            } else {
-                print("No response data received.")
-            }
+        guard !urlString.isEmpty, !apiKey.isEmpty else {
+            print("Missing API settings. Please configure them in Settings.")
+            return nil
         }
         
-        // 启动任务
-        task.resume()
-        return
+        if model.isEmpty {
+            print("Missing model setting. Please configure it in Settings.")
+            return nil
+        }
         
+        guard let url = URL(string: urlString) else {
+            print("Invalid API URL in Settings.")
+            return nil
+        }
+        
+        return (url, apiKey, model)
     }
     
     func startScreenshotProcess() {
@@ -218,14 +249,31 @@ class IdentifyProcess: ObservableObject {
         return pngData.base64EncodedString(options: .lineLength64Characters)
     }
     func convertImageToLatex() {
-        // OCR到LaTeX转换的虚拟实现
-        let result = ocrFormulaToLatex(imageBase64: self.image_base64String)
-        self.latexFormula = result
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(result, forType: .string)
-        
-        // 复制到剪贴板后，图标跳动一下
-        NSApp.requestUserAttention(.informationalRequest)
+        isLoading = true
+        let base64String = self.image_base64String
+        DispatchQueue.global(qos: .userInitiated).async {
+            let result = self.ocrFormulaToLatex(imageBase64: base64String)
+            DispatchQueue.main.async {
+                self.latexFormula = result
+                let formatToUse = self.preferredCopyFormat()
+                if formatToUse == "mathml" {
+                    self.mathmlFormula = ""
+                    self.pendingMathMLCopy = true
+                    self.pendingCopyFeedback = false
+                } else {
+                    self.pendingMathMLCopy = false
+                    self.pendingCopyFeedback = false
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(result, forType: .string)
+                }
+                self.isLoading = false
+                
+                // 复制到剪贴板后，图标跳动一下
+                if formatToUse == "latex" {
+                    NSApp.requestUserAttention(.informationalRequest)
+                }
+            }
+        }
     }
     
     // 直接调用requestMathML函数并更新mathmlFormula变量
@@ -233,5 +281,51 @@ class IdentifyProcess: ObservableObject {
         coordinator.requestMathML()
         // 注意：实际的mathmlFormula更新是在KaTeXView的回调中完成的
         // 该方法只是触发了requestMathML的调用
+    }
+    
+    func completeMathMLCopyIfNeeded() {
+        if pendingMathMLCopy, !mathmlFormula.isEmpty {
+            let success = copyFormulaCode(copyFormula: "mathml")
+            if pendingCopyFeedback {
+                showCopyFeedback(success ? "已复制 MathML(word)" : "复制失败")
+            }
+            pendingMathMLCopy = false
+            pendingCopyFeedback = false
+        }
+    }
+    
+    func showCopyFeedback(_ message: String) {
+        copyFeedbackWorkItem?.cancel()
+        copyFeedbackMessage = message
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.copyFeedbackMessage = ""
+        }
+        copyFeedbackWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5, execute: workItem)
+    }
+    
+    private func preferredCopyFormat() -> String {
+        let format = UserDefaults.standard.string(forKey: "copyFormat")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "latex"
+        return format.isEmpty ? "latex" : format
+    }
+    
+    private func copyStringToPasteboard(_ content: String, isMathML: Bool) -> Bool {
+        let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            return false
+        }
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        let item = NSPasteboardItem()
+        item.setString(trimmed, forType: .string)
+        if isMathML {
+            item.setString(trimmed, forType: NSPasteboard.PasteboardType("public.mathml"))
+            let htmlString = "<html><body>\(trimmed)</body></html>"
+            if let htmlData = htmlString.data(using: .utf8) {
+                item.setData(htmlData, forType: .html)
+            }
+        }
+        return pasteboard.writeObjects([item])
     }
 }

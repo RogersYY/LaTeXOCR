@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		C70819252DACBC7E00647AAF /* KaTexView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C70819242DACBC7E00647AAF /* KaTexView.swift */; };
+		C76C0B9F2DB2345600A1B2C3 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C76C0B9E2DB2345600A1B2C3 /* SettingsView.swift */; };
 		C7710A9B2DACDD79000E70E5 /* MainBoardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7710A9A2DACDD79000E70E5 /* MainBoardView.swift */; };
 		C7710A9D2DACE18E000E70E5 /* IdentifyProcess.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7710A9C2DACE18E000E70E5 /* IdentifyProcess.swift */; };
 		C7C08F7C2CDA1DC0005EDFBD /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = C7C08F7B2CDA1DC0005EDFBD /* AppDelegate.swift */; };
@@ -39,6 +40,7 @@
 
 /* Begin PBXFileReference section */
 		C70819242DACBC7E00647AAF /* KaTexView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaTexView.swift; sourceTree = "<group>"; };
+		C76C0B9E2DB2345600A1B2C3 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		C7710A9A2DACDD79000E70E5 /* MainBoardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainBoardView.swift; sourceTree = "<group>"; };
 		C7710A9C2DACE18E000E70E5 /* IdentifyProcess.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IdentifyProcess.swift; sourceTree = "<group>"; };
 		C7C08F7B2CDA1DC0005EDFBD /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -115,6 +117,7 @@
 				C7C08F7D2CDA20F0005EDFBD /* Info.plist */,
 				C7D48ABA2CC4D28E00BE2130 /* LaTeXOCRApp.swift */,
 				C7D48ABC2CC4D28E00BE2130 /* ContentView.swift */,
+				C76C0B9E2DB2345600A1B2C3 /* SettingsView.swift */,
 				C7D48ABE2CC4D29100BE2130 /* Assets.xcassets */,
 				C7D48AC32CC4D29100BE2130 /* LaTeXOCR.entitlements */,
 				C7D48AC02CC4D29100BE2130 /* Preview Content */,
@@ -284,6 +287,7 @@
 				C7C08F7C2CDA1DC0005EDFBD /* AppDelegate.swift in Sources */,
 				C7710A9D2DACE18E000E70E5 /* IdentifyProcess.swift in Sources */,
 				C7D48ABD2CC4D28E00BE2130 /* ContentView.swift in Sources */,
+				C76C0B9F2DB2345600A1B2C3 /* SettingsView.swift in Sources */,
 				C70819252DACBC7E00647AAF /* KaTexView.swift in Sources */,
 				C7710A9B2DACDD79000E70E5 /* MainBoardView.swift in Sources */,
 				C7D48ABB2CC4D28E00BE2130 /* LaTeXOCRApp.swift in Sources */,
@@ -448,15 +452,16 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = LaTeXOCR/LaTeXOCR.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"LaTeXOCR/Preview Content\"";
 				DEVELOPMENT_TEAM = B8P56QPAJ4;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LaTeXOCR/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LaTeXOCR;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_LSUIElement = NO;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -479,15 +484,16 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = YES;
 				CODE_SIGN_ENTITLEMENTS = LaTeXOCR/LaTeXOCR.entitlements;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"LaTeXOCR/Preview Content\"";
 				DEVELOPMENT_TEAM = B8P56QPAJ4;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = LaTeXOCR/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = LaTeXOCR;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.developer-tools";
 				INFOPLIST_KEY_LSUIElement = NO;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
