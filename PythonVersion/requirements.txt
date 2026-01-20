@@ -1,5 +1,4 @@
 Pillow
 pynput
 requests
-ttkbootstrap
-pywebview
+PySide6
