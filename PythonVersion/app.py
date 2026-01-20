@@ -252,31 +252,27 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         self.capture_btn.setObjectName("PrimaryButton")
         action_row = QtWidgets.QHBoxLayout()
         self.settings_btn = QtWidgets.QPushButton("Settings")
-        self.focus_btn = QtWidgets.QPushButton("Focus Preview")
+        action_row.addWidget(self.capture_btn)
         action_row.addWidget(self.settings_btn)
-        action_row.addWidget(self.focus_btn)
-        action_box.addWidget(self.capture_btn)
         action_box.addLayout(action_row)
         header_layout.addLayout(action_box)
 
         status_row = QtWidgets.QHBoxLayout()
-        self.status_label = QtWidgets.QLabel("Ready")
-        self.status_label.setObjectName("StatusLabel")
         self.progress = QtWidgets.QProgressBar()
         self.progress.setMaximum(0)
         self.progress.setVisible(False)
-        status_row.addWidget(self.status_label)
         status_row.addStretch()
         status_row.addWidget(self.progress)
         layout.addLayout(status_row)
 
         main_row = QtWidgets.QHBoxLayout()
-        layout.addLayout(main_row, 4)
+        layout.addLayout(main_row, 2)
 
         self.image_card = self._make_card("Captured Region")
         self.image_label = QtWidgets.QLabel("No screenshot yet.")
         self.image_label.setAlignment(QtCore.Qt.AlignCenter)
         self.image_label.setObjectName("PreviewLabel")
+        self.image_label.setStyleSheet("background: #ffffff;")
         self.image_card["body"].layout().addWidget(self.image_label)
         self.image_card["frame"].setMinimumWidth(260)
         self.image_card["frame"].setMinimumHeight(200)
@@ -302,29 +298,39 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         main_row.setStretch(1, 1)
 
         self.output_card = self._make_card("LaTeX Output")
+        self.status_label = QtWidgets.QLabel("Ready")
+        self.status_label.setObjectName("StatusLabel")
+        self.status_label.setAlignment(QtCore.Qt.AlignCenter)
+        self.output_card["header_layout"].addWidget(
+            self.status_label, 0, 1, alignment=QtCore.Qt.AlignCenter
+        )
         output_layout = self.output_card["body"].layout()
         self.output_hint = QtWidgets.QLabel("")
         self.output_hint.setObjectName("OutputHint")
+        self.output_hint.setVisible(False)
         output_layout.addWidget(self.output_hint)
-        button_row = QtWidgets.QHBoxLayout()
+        output_layout.setSpacing(4)
         self.copy_latex_btn = QtWidgets.QPushButton("Copy LaTeX")
         self.copy_mathml_btn = QtWidgets.QPushButton("Copy MathML")
+        buttons_container = QtWidgets.QWidget()
+        buttons_container.setObjectName("OutputButtonRow")
+        button_row = QtWidgets.QHBoxLayout(buttons_container)
+        button_row.setContentsMargins(8, 4, 8, 4)
+        button_row.setSpacing(8)
         button_row.addStretch()
         button_row.addWidget(self.copy_latex_btn)
-        button_row.addSpacing(12)
         button_row.addWidget(self.copy_mathml_btn)
         button_row.addStretch()
-        output_layout.addLayout(button_row)
+        output_layout.addWidget(buttons_container)
         self.latex_text = QtWidgets.QTextEdit()
         self.latex_text.setObjectName("LatexText")
-        self.latex_text.setMinimumHeight(140)
+        self.latex_text.setMinimumHeight(80)
         output_layout.addWidget(self.latex_text, 1)
         self.output_card["frame"].setMaximumHeight(280)
-        layout.addWidget(self.output_card["frame"], 1)
+        layout.addWidget(self.output_card["frame"], 2)
 
         self.capture_btn.clicked.connect(self.capture_screen)
         self.settings_btn.clicked.connect(self.open_settings)
-        self.focus_btn.clicked.connect(self.focus_preview)
         self.copy_latex_btn.clicked.connect(self.copy_latex)
         self.copy_mathml_btn.clicked.connect(self.copy_mathml)
         self.webview.loadFinished.connect(self._on_preview_loaded)
@@ -335,25 +341,39 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         frame.setObjectName("Card")
         layout = QtWidgets.QVBoxLayout(frame)
         layout.setContentsMargins(14, 14, 14, 14)
-        layout.setSpacing(8)
+        layout.setSpacing(4)
 
         title_label = QtWidgets.QLabel(title)
         title_label.setObjectName("CardTitle")
+        title_stack = QtWidgets.QVBoxLayout()
+        title_stack.setContentsMargins(0, 0, 0, 0)
+        title_stack.setSpacing(2)
+        title_stack.addWidget(title_label)
         subtitle_label = None
         if subtitle:
             subtitle_label = QtWidgets.QLabel(subtitle)
             subtitle_label.setObjectName("CardSubtitle")
+            title_stack.addWidget(subtitle_label)
+
+        header = QtWidgets.QWidget()
+        header.setObjectName("CardHeader")
+        header_layout = QtWidgets.QGridLayout(header)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setColumnStretch(0, 1)
+        header_layout.setColumnStretch(1, 1)
+        header_layout.setColumnStretch(2, 1)
+        title_container = QtWidgets.QWidget()
+        title_container.setLayout(title_stack)
+        header_layout.addWidget(title_container, 0, 0, alignment=QtCore.Qt.AlignLeft)
 
         body = QtWidgets.QWidget()
         body_layout = QtWidgets.QVBoxLayout(body)
         body_layout.setContentsMargins(0, 0, 0, 0)
         body_layout.setSpacing(6)
 
-        layout.addWidget(title_label)
-        if subtitle_label:
-            layout.addWidget(subtitle_label)
+        layout.addWidget(header)
         layout.addWidget(body, 1)
-        return {"frame": frame, "body": body}
+        return {"frame": frame, "body": body, "header_layout": header_layout}
 
     def _apply_styles(self):
         font = QtGui.QFont()
@@ -374,6 +394,9 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
             border: 1px solid #ead3bf;
             border-radius: 14px;
         }
+        QWidget#CardHeader {
+            background: #ffffff;
+        }
         QLabel#Title {
             font-size: 30px;
             font-weight: 600;
@@ -384,14 +407,16 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         QLabel#CardTitle {
             font-size: 14px;
             font-weight: 600;
-            background: transparent;
+            background: #ffffff;
         }
         QLabel#CardSubtitle {
             color: #6b7280;
+            background: #ffffff;
         }
         QLabel#StatusLabel {
             color: #0f766e;
             font-weight: 600;
+            background: #ffffff;
         }
         QPushButton {
             padding: 8px 14px;
@@ -406,13 +431,18 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
             font-weight: 600;
         }
         QTextEdit#LatexText {
-            background: transparent;
+            background: #ffffff;
             border: 1px solid #ead3bf;
             border-radius: 8px;
         }
         QLabel#OutputHint {
             color: #9a3412;
             font-weight: 600;
+            background: #ffffff;
+        }
+        QWidget#OutputButtonRow {
+            background: #ffffff;
+            border-radius: 0px;
         }
         """
         self.setStyleSheet(style)
@@ -627,9 +657,6 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
             self.settings.save()
             self._start_hotkey()
             self._set_status("Settings saved.")
-
-    def focus_preview(self):
-        self.webview.setFocus()
 
     def closeEvent(self, event):
         if self.hotkey_listener:
