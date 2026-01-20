@@ -189,8 +189,11 @@ class SettingsDialog(QtWidgets.QDialog):
         form.addRow("API Base URL", self.api_url)
         form.addRow("API Key", self.api_key)
         model_row = QtWidgets.QHBoxLayout()
+        model_row.setContentsMargins(0, 0, 0, 0)
+        model_row.setSpacing(6)
+        self.api_model_combo.setFixedWidth(120)
         model_row.addWidget(self.api_model_combo)
-        model_row.addWidget(self.api_model_custom)
+        model_row.addWidget(self.api_model_custom, 1)
         model_container = QtWidgets.QWidget()
         model_container.setLayout(model_row)
         form.addRow("Model", model_container)
@@ -238,9 +241,12 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         self.settings = AppSettings()
         self.signals = SignalBus()
 
-        self.setWindowTitle("LaTeXOCR (Python)")
+        self.setWindowTitle("LaTeXOCR for 415课题组")
         self.resize(1120, 620)
         self.setMinimumSize(960, 520)
+        icon_path = resource_path("assets/icon.png")
+        if icon_path.exists():
+            self.setWindowIcon(QtGui.QIcon(str(icon_path)))
 
         self.hotkey_listener = None
         self.preview_ready = False
@@ -274,14 +280,14 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         layout.addWidget(header)
 
         title_box = QtWidgets.QVBoxLayout()
-        title = QtWidgets.QLabel("LaTeXOCR")
+        title = QtWidgets.QLabel("LaTeXOCR for 415课题组")
         title.setObjectName("Title")
         title_box.addWidget(title)
         header_layout.addLayout(title_box)
         header_layout.addStretch()
 
         action_box = QtWidgets.QVBoxLayout()
-        self.capture_btn = QtWidgets.QPushButton("Capture (Ctrl+Shift+A)")
+        self.capture_btn = QtWidgets.QPushButton(self._capture_label())
         self.capture_btn.setObjectName("PrimaryButton")
         action_row = QtWidgets.QHBoxLayout()
         self.settings_btn = QtWidgets.QPushButton("Settings")
@@ -506,6 +512,7 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         try:
             self.hotkey_listener = keyboard.GlobalHotKeys({hotkey: trigger})
             self.hotkey_listener.start()
+            self.capture_btn.setText(self._capture_label())
         except Exception as exc:
             self._set_status(f"Hotkey error: {exc}")
 
@@ -718,6 +725,14 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         if self.hotkey_listener:
             self.hotkey_listener.stop()
         super().closeEvent(event)
+
+    def _capture_label(self):
+        hotkey = self.settings.data.get("hotkey", DEFAULT_CONFIG["hotkey"])
+        display = hotkey.replace("<", "").replace(">", "")
+        display = display.replace("+", "+").replace("ctrl", "Ctrl").replace(
+            "shift", "Shift"
+        ).replace("alt", "Alt").replace("cmd", "Cmd")
+        return f"Capture ({display})"
 
 
 def main():
