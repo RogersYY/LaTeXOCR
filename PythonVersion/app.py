@@ -8,7 +8,7 @@ from pathlib import Path
 
 import requests
 from pynput import keyboard
-from PySide6 import QtCore, QtGui, QtWidgets, QtWebEngineWidgets
+from PySide6 import QtCore, QtGui, QtWidgets, QtWebEngineCore, QtWebEngineWidgets
 
 
 DEFAULT_CONFIG = {
@@ -212,8 +212,8 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         self.signals = SignalBus()
 
         self.setWindowTitle("LaTeXOCR (Python)")
-        self.resize(1280, 820)
-        self.setMinimumSize(1120, 720)
+        self.resize(1120, 620)
+        self.setMinimumSize(960, 520)
 
         self.hotkey_listener = None
         self.preview_ready = False
@@ -242,13 +242,8 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
 
         title_box = QtWidgets.QVBoxLayout()
         title = QtWidgets.QLabel("LaTeXOCR")
-        subtitle = QtWidgets.QLabel(
-            "Capture formulas, render with KaTeX, and copy instantly."
-        )
         title.setObjectName("Title")
-        subtitle.setObjectName("Subtitle")
         title_box.addWidget(title)
-        title_box.addWidget(subtitle)
         header_layout.addLayout(title_box)
         header_layout.addStretch()
 
@@ -276,41 +271,55 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         layout.addLayout(status_row)
 
         main_row = QtWidgets.QHBoxLayout()
-        layout.addLayout(main_row, 1)
+        layout.addLayout(main_row, 4)
 
-        self.image_card = self._make_card(
-            "Captured Region", "Drag to select the formula area."
-        )
+        self.image_card = self._make_card("Captured Region")
         self.image_label = QtWidgets.QLabel("No screenshot yet.")
         self.image_label.setAlignment(QtCore.Qt.AlignCenter)
         self.image_label.setObjectName("PreviewLabel")
         self.image_card["body"].layout().addWidget(self.image_label)
+        self.image_card["frame"].setMinimumWidth(260)
+        self.image_card["frame"].setMinimumHeight(200)
+        self.image_card["frame"].setSizePolicy(
+            QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Expanding
+        )
         main_row.addWidget(self.image_card["frame"], 1)
 
-        self.preview_card = self._make_card(
-            "KaTeX Preview", "Rendered directly in this window."
-        )
+        self.preview_card = self._make_card("KaTeX Preview")
         self.webview = QtWebEngineWidgets.QWebEngineView()
         html_path = resource_path("assets/katex_preview.html")
         self.webview.setUrl(QtCore.QUrl.fromLocalFile(str(html_path)))
-        self.preview_card["body"].layout().addWidget(self.webview)
-        main_row.addWidget(self.preview_card["frame"], 1)
-
-        self.output_card = self._make_card(
-            "LaTeX Output", "Edit the formula before copying."
+        self.webview.settings().setAttribute(
+            QtWebEngineCore.QWebEngineSettings.ShowScrollBars, False
         )
+        self.preview_card["body"].layout().addWidget(self.webview)
+        self.preview_card["frame"].setMinimumHeight(200)
+        self.preview_card["frame"].setSizePolicy(
+            QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding
+        )
+        main_row.addWidget(self.preview_card["frame"], 1)
+        main_row.setStretch(0, 1)
+        main_row.setStretch(1, 1)
+
+        self.output_card = self._make_card("LaTeX Output")
         output_layout = self.output_card["body"].layout()
+        self.output_hint = QtWidgets.QLabel("")
+        self.output_hint.setObjectName("OutputHint")
+        output_layout.addWidget(self.output_hint)
         button_row = QtWidgets.QHBoxLayout()
         self.copy_latex_btn = QtWidgets.QPushButton("Copy LaTeX")
         self.copy_mathml_btn = QtWidgets.QPushButton("Copy MathML")
+        button_row.addStretch()
         button_row.addWidget(self.copy_latex_btn)
+        button_row.addSpacing(12)
         button_row.addWidget(self.copy_mathml_btn)
         button_row.addStretch()
         output_layout.addLayout(button_row)
         self.latex_text = QtWidgets.QTextEdit()
         self.latex_text.setObjectName("LatexText")
-        self.latex_text.setMinimumHeight(220)
+        self.latex_text.setMinimumHeight(140)
         output_layout.addWidget(self.latex_text, 1)
+        self.output_card["frame"].setMaximumHeight(280)
         layout.addWidget(self.output_card["frame"], 1)
 
         self.capture_btn.clicked.connect(self.capture_screen)
@@ -321,7 +330,7 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         self.webview.loadFinished.connect(self._on_preview_loaded)
         self.latex_text.textChanged.connect(self._schedule_preview_update)
 
-    def _make_card(self, title, subtitle):
+    def _make_card(self, title, subtitle=""):
         frame = QtWidgets.QFrame()
         frame.setObjectName("Card")
         layout = QtWidgets.QVBoxLayout(frame)
@@ -330,8 +339,10 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
 
         title_label = QtWidgets.QLabel(title)
         title_label.setObjectName("CardTitle")
-        subtitle_label = QtWidgets.QLabel(subtitle)
-        subtitle_label.setObjectName("CardSubtitle")
+        subtitle_label = None
+        if subtitle:
+            subtitle_label = QtWidgets.QLabel(subtitle)
+            subtitle_label.setObjectName("CardSubtitle")
 
         body = QtWidgets.QWidget()
         body_layout = QtWidgets.QVBoxLayout(body)
@@ -339,7 +350,8 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         body_layout.setSpacing(6)
 
         layout.addWidget(title_label)
-        layout.addWidget(subtitle_label)
+        if subtitle_label:
+            layout.addWidget(subtitle_label)
         layout.addWidget(body, 1)
         return {"frame": frame, "body": body}
 
@@ -372,6 +384,7 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         QLabel#CardTitle {
             font-size: 14px;
             font-weight: 600;
+            background: transparent;
         }
         QLabel#CardSubtitle {
             color: #6b7280;
@@ -393,9 +406,13 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
             font-weight: 600;
         }
         QTextEdit#LatexText {
-            background: #fffaf1;
+            background: transparent;
             border: 1px solid #ead3bf;
             border-radius: 8px;
+        }
+        QLabel#OutputHint {
+            color: #9a3412;
+            font-weight: 600;
         }
         """
         self.setStyleSheet(style)

@@ -11,6 +11,7 @@
       font-family: "Georgia", "Times New Roman", serif;
       color: #1f2937;
       background: linear-gradient(140deg, #fff6e9 0%, #e5f6ee 100%);
+      overflow: hidden;
     }
     body::before {
       content: "";
@@ -23,15 +24,22 @@
     }
     #panel {
       position: relative;
-      margin: 22px;
-      padding: 22px 26px;
+      margin: 5px;
+      padding: 5px;
       background: #ffffff;
       border-radius: 12px;
       box-shadow: 0 10px 30px rgba(31, 41, 55, 0.15);
       border: 1px solid #eadfce;
+      height: calc(100vh - 20px);
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     #formula {
-      font-size: 32px;
+      font-size: clamp(16px, 2.2vw, 32px);
+      max-width: 100%;
+      text-align: center;
     }
     #error {
       margin-top: 12px;
