@@ -89,6 +89,7 @@ class SelectionOverlay(QtWidgets.QWidget):
             | QtCore.Qt.Tool
         )
         self.setAttribute(QtCore.Qt.WA_TranslucentBackground, False)
+        self.setCursor(QtCore.Qt.CrossCursor)
         self.setMouseTracking(True)
 
         self.screen = screen
@@ -103,6 +104,14 @@ class SelectionOverlay(QtWidgets.QWidget):
     def paintEvent(self, event):
         painter = QtGui.QPainter(self)
         painter.drawPixmap(0, 0, self.pixmap)
+        painter.fillRect(self.rect(), QtGui.QColor(15, 23, 42, 90))
+        painter.setPen(QtGui.QColor(255, 255, 255, 200))
+        painter.setFont(QtGui.QFont("Segoe UI", 12, QtGui.QFont.Bold))
+        painter.drawText(
+            QtCore.QRect(24, 20, 480, 40),
+            QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter,
+            "Drag to select area (Esc to cancel)",
+        )
 
     def mousePressEvent(self, event):
         self.origin = event.pos()
@@ -209,6 +218,10 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         self.hotkey_listener = None
         self.preview_ready = False
         self.current_image = None
+        self._pending_preview_text = ""
+        self.preview_timer = QtCore.QTimer(self)
+        self.preview_timer.setSingleShot(True)
+        self.preview_timer.timeout.connect(self._refresh_preview_from_editor)
 
         self._build_ui()
         self._apply_styles()
@@ -286,7 +299,7 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         self.output_card = self._make_card(
             "LaTeX Output", "Edit the formula before copying."
         )
-        output_layout = QtWidgets.QVBoxLayout()
+        output_layout = self.output_card["body"].layout()
         button_row = QtWidgets.QHBoxLayout()
         self.copy_latex_btn = QtWidgets.QPushButton("Copy LaTeX")
         self.copy_mathml_btn = QtWidgets.QPushButton("Copy MathML")
@@ -296,8 +309,8 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         output_layout.addLayout(button_row)
         self.latex_text = QtWidgets.QTextEdit()
         self.latex_text.setObjectName("LatexText")
+        self.latex_text.setMinimumHeight(220)
         output_layout.addWidget(self.latex_text, 1)
-        self.output_card["body"].setLayout(output_layout)
         layout.addWidget(self.output_card["frame"], 1)
 
         self.capture_btn.clicked.connect(self.capture_screen)
@@ -306,6 +319,7 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         self.copy_latex_btn.clicked.connect(self.copy_latex)
         self.copy_mathml_btn.clicked.connect(self.copy_mathml)
         self.webview.loadFinished.connect(self._on_preview_loaded)
+        self.latex_text.textChanged.connect(self._schedule_preview_update)
 
     def _make_card(self, title, subtitle):
         frame = QtWidgets.QFrame()
@@ -414,6 +428,7 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         screen = QtGui.QGuiApplication.screenAt(QtGui.QCursor.pos())
         if screen is None:
             screen = QtGui.QGuiApplication.primaryScreen()
+        self._set_status("Drag to select area (Esc to cancel).")
         overlay = SelectionOverlay(screen)
         loop = QtCore.QEventLoop()
         result = {"image": None}
@@ -442,6 +457,8 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
     def _update_image_preview(self, image):
         pixmap = QtGui.QPixmap.fromImage(image)
         target = self.image_label.size()
+        if target.width() <= 0 or target.height() <= 0:
+            target = QtCore.QSize(520, 360)
         scaled = pixmap.scaled(
             target, QtCore.Qt.KeepAspectRatio, QtCore.Qt.SmoothTransformation
         )
@@ -537,7 +554,18 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
     def _on_preview_loaded(self, ok):
         self.preview_ready = ok
         if ok:
-            self._update_preview(self.latex_text.toPlainText())
+            text = self._pending_preview_text or self.latex_text.toPlainText()
+            self._update_preview(text)
+
+    def _schedule_preview_update(self):
+        self._pending_preview_text = self.latex_text.toPlainText()
+        if self.preview_ready:
+            self.preview_timer.start(250)
+
+    def _refresh_preview_from_editor(self):
+        text = self._pending_preview_text
+        if text:
+            self._update_preview(text)
 
     def _get_mathml(self, latex):
         if not self.preview_ready:
