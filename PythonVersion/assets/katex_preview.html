@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>KaTeX Preview</title>
+  <link rel="stylesheet" href="katex/katex.min.css">
+  <style>
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Georgia", "Times New Roman", serif;
+      color: #1f2937;
+      background: linear-gradient(140deg, #fff6e9 0%, #e5f6ee 100%);
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      background-image: radial-gradient(#efe6d8 1px, transparent 1px);
+      background-size: 120px 120px;
+      opacity: 0.4;
+      pointer-events: none;
+    }
+    #panel {
+      position: relative;
+      margin: 22px;
+      padding: 22px 26px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(31, 41, 55, 0.15);
+      border: 1px solid #eadfce;
+    }
+    #formula {
+      font-size: 32px;
+    }
+    #error {
+      margin-top: 12px;
+      color: #b00020;
+      font-size: 13px;
+    }
+    .fade {
+      animation: fadeInUp 0.35s ease-out;
+    }
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="panel">
+    <div id="formula"></div>
+    <div id="error"></div>
+  </div>
+
+  <script src="katex/katex.min.js"></script>
+  <script>
+    const formulaEl = document.getElementById("formula");
+    const errorEl = document.getElementById("error");
+
+    window.setLatex = function (latex) {
+      const text = latex || "";
+      errorEl.textContent = "";
+      try {
+        katex.render(text, formulaEl, {
+          throwOnError: false,
+          displayMode: true
+        });
+        formulaEl.classList.remove("fade");
+        void formulaEl.offsetWidth;
+        formulaEl.classList.add("fade");
+      } catch (err) {
+        formulaEl.textContent = "";
+        errorEl.textContent = err && err.message ? err.message : "Render error";
+      }
+    };
+
+    window.getMathML = function (latex) {
+      try {
+        return katex.renderToString(latex || "", {
+          throwOnError: false,
+          output: "mathml"
+        });
+      } catch (err) {
+        return "";
+      }
+    };
+
+    window.setLatex("");
+  </script>
+</body>
+</html>
