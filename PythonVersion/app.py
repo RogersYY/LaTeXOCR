@@ -12,8 +12,8 @@ from PySide6 import QtCore, QtGui, QtWidgets, QtWebEngineCore, QtWebEngineWidget
 
 
 DEFAULT_CONFIG = {
-    "api_base_url": "http://1.95.70.60:3000/v1/chat/completions",
-    "api_key": "sk-3AwknygGjEskI3SdeBstLZaHHh9peebQFHnEv4HWeUVdELG1",
+    "api_base_url": "",
+    "api_key": "",
     "api_model": "gpt-5.2",
     "copy_format": "latex",
     "hotkey": "<ctrl>+<shift>+a",
@@ -169,7 +169,18 @@ class SettingsDialog(QtWidgets.QDialog):
         self.api_url = QtWidgets.QLineEdit(settings.data.get("api_base_url", ""))
         self.api_key = QtWidgets.QLineEdit(settings.data.get("api_key", ""))
         self.api_key.setEchoMode(QtWidgets.QLineEdit.Password)
-        self.api_model = QtWidgets.QLineEdit(settings.data.get("api_model", ""))
+        current_model = settings.data.get("api_model", "gpt-5.2").strip() or "gpt-5.2"
+        self.api_model_combo = QtWidgets.QComboBox()
+        self.api_model_combo.addItems(["gpt-5.2", "其他"])
+        self.api_model_custom = QtWidgets.QLineEdit()
+        self.api_model_custom.setPlaceholderText("输入自定义模型名")
+        if current_model in ("gpt-5.2", "其他"):
+            self.api_model_combo.setCurrentText(current_model)
+        else:
+            self.api_model_combo.setCurrentText("其他")
+            self.api_model_custom.setText(current_model)
+        self._toggle_custom_model()
+        self.api_model_combo.currentTextChanged.connect(self._toggle_custom_model)
         self.copy_format = QtWidgets.QComboBox()
         self.copy_format.addItems(["latex", "mathml"])
         self.copy_format.setCurrentText(settings.data.get("copy_format", "latex"))
@@ -177,7 +188,12 @@ class SettingsDialog(QtWidgets.QDialog):
 
         form.addRow("API Base URL", self.api_url)
         form.addRow("API Key", self.api_key)
-        form.addRow("Model", self.api_model)
+        model_row = QtWidgets.QHBoxLayout()
+        model_row.addWidget(self.api_model_combo)
+        model_row.addWidget(self.api_model_custom)
+        model_container = QtWidgets.QWidget()
+        model_container.setLayout(model_row)
+        form.addRow("Model", model_container)
         form.addRow("Copy Format", self.copy_format)
         form.addRow("Hotkey", self.hotkey)
 
@@ -196,13 +212,24 @@ class SettingsDialog(QtWidgets.QDialog):
         cancel_btn.clicked.connect(self.reject)
 
     def get_values(self):
+        selected = self.api_model_combo.currentText().strip()
+        if selected == "其他":
+            model_value = self.api_model_custom.text().strip()
+        else:
+            model_value = selected
+        if not model_value:
+            model_value = "gpt-5.2"
         return {
             "api_base_url": self.api_url.text().strip(),
             "api_key": self.api_key.text().strip(),
-            "api_model": self.api_model.text().strip(),
+            "api_model": model_value,
             "copy_format": self.copy_format.currentText().strip(),
             "hotkey": self.hotkey.text().strip(),
         }
+
+    def _toggle_custom_model(self):
+        is_custom = self.api_model_combo.currentText().strip() == "其他"
+        self.api_model_custom.setEnabled(is_custom)
 
 
 class LatexOCRWindow(QtWidgets.QMainWindow):
@@ -222,6 +249,12 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         self.preview_timer = QtCore.QTimer(self)
         self.preview_timer.setSingleShot(True)
         self.preview_timer.timeout.connect(self._refresh_preview_from_editor)
+        self.output_hint_timer = QtCore.QTimer(self)
+        self.output_hint_timer.setSingleShot(True)
+        self.output_hint_timer.timeout.connect(self._clear_output_hint)
+        self.status_timer = QtCore.QTimer(self)
+        self.status_timer.setSingleShot(True)
+        self.status_timer.timeout.connect(self._clear_status_label)
 
         self._build_ui()
         self._apply_styles()
@@ -252,18 +285,21 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         self.capture_btn.setObjectName("PrimaryButton")
         action_row = QtWidgets.QHBoxLayout()
         self.settings_btn = QtWidgets.QPushButton("Settings")
+        self.progress = QtWidgets.QProgressBar()
+        self.progress.setMaximum(0)
+        self.progress.setTextVisible(False)
+        self.progress.setFixedHeight(6)
+        self.progress.setFixedWidth(80)
+        self.progress.setSizePolicy(
+            QtWidgets.QSizePolicy.Fixed, QtWidgets.QSizePolicy.Fixed
+        )
+        self.progress.setVisible(False)
+        action_row.addWidget(self.progress)
+        action_row.addSpacing(8)
         action_row.addWidget(self.capture_btn)
         action_row.addWidget(self.settings_btn)
         action_box.addLayout(action_row)
         header_layout.addLayout(action_box)
-
-        status_row = QtWidgets.QHBoxLayout()
-        self.progress = QtWidgets.QProgressBar()
-        self.progress.setMaximum(0)
-        self.progress.setVisible(False)
-        status_row.addStretch()
-        status_row.addWidget(self.progress)
-        layout.addLayout(status_row)
 
         main_row = QtWidgets.QHBoxLayout()
         layout.addLayout(main_row, 2)
@@ -417,6 +453,9 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
             color: #0f766e;
             font-weight: 600;
             background: #ffffff;
+        }
+        QWidget#StatusContainer {
+            background: transparent;
         }
         QPushButton {
             padding: 8px 14px;
@@ -589,8 +628,12 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
         self._set_status(f"OCR error: {message}")
         QtWidgets.QMessageBox.critical(self, "OCR error", message)
 
-    def _set_status(self, message):
+    def _set_status(self, message, duration_ms=None):
         self.status_label.setText(message)
+        if duration_ms:
+            self.status_timer.start(duration_ms)
+        else:
+            self.status_timer.stop()
 
     def _update_preview(self, latex):
         if not self.preview_ready:
@@ -632,22 +675,35 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
     def copy_latex(self):
         latex = self.latex_text.toPlainText().strip()
         if not latex:
-            self._set_status("No LaTeX to copy.")
+            self._set_status("No LaTeX to copy.", duration_ms=3000)
             return
         QtGui.QGuiApplication.clipboard().setText(latex)
-        self._set_status("LaTeX copied.")
+        self._set_status("LaTeX copied.", duration_ms=3000)
 
     def copy_mathml(self):
         latex = self.latex_text.toPlainText().strip()
         if not latex:
-            self._set_status("No LaTeX to convert.")
+            self._set_status("No LaTeX to convert.", duration_ms=3000)
             return
         mathml = self._get_mathml(latex)
         if not mathml:
-            self._set_status("MathML not ready.")
+            self._set_status("MathML not ready.", duration_ms=3000)
             return
         QtGui.QGuiApplication.clipboard().setText(mathml)
-        self._set_status("MathML copied.")
+        self._set_status("MathML copied.", duration_ms=3000)
+
+    def _show_output_hint(self, message, duration_ms=3000):
+        self.output_hint.setText(message)
+        self.output_hint.setVisible(True)
+        self.output_hint_timer.start(duration_ms)
+
+    def _clear_output_hint(self):
+        self.output_hint_timer.stop()
+        self.output_hint.setText("")
+        self.output_hint.setVisible(False)
+
+    def _clear_status_label(self):
+        self.status_label.setText("")
 
     def open_settings(self):
         dialog = SettingsDialog(self.settings, self)
