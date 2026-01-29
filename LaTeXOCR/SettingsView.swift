@@ -57,7 +57,7 @@ struct SettingsView: View {
                     Text("MathML(word)").tag("mathml")
                 }
                 .pickerStyle(.menu)
-                Text("请填写到 /v1 即可，例如: https://api.openai.com/v1")
+                Text("API地址请填写到 /v1 即可，例如: https://api.openai.com/v1")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }

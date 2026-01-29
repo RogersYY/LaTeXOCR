@@ -16,7 +16,7 @@ DEFAULT_CONFIG = {
     "api_key": "",
     "api_model": "gpt-5.2",
     "copy_format": "latex",
-    "hotkey": "<ctrl>+<shift>+a",
+    "hotkey": "<ctrl>+<shift>+A",
 }
 
 
@@ -167,6 +167,7 @@ class SettingsDialog(QtWidgets.QDialog):
         layout.addLayout(form)
 
         self.api_url = QtWidgets.QLineEdit(settings.data.get("api_base_url", ""))
+        self.api_url.setPlaceholderText("https://api.openai.com/v1")
         self.api_key = QtWidgets.QLineEdit(settings.data.get("api_key", ""))
         self.api_key.setEchoMode(QtWidgets.QLineEdit.Password)
         current_model = settings.data.get("api_model", "gpt-5.2").strip() or "gpt-5.2"
@@ -199,6 +200,10 @@ class SettingsDialog(QtWidgets.QDialog):
         form.addRow("Model", model_container)
         form.addRow("Copy Format", self.copy_format)
         form.addRow("Hotkey", self.hotkey)
+
+        api_hint = QtWidgets.QLabel("API Base URL 填到 /v1 即可，例如: https://api.openai.com/v1")
+        api_hint.setStyleSheet("color: #6b7280;")
+        layout.addWidget(api_hint)
 
         hint = QtWidgets.QLabel("Hotkey example: <ctrl>+<shift>+a")
         hint.setStyleSheet("color: #6b7280;")
@@ -235,11 +240,33 @@ class SettingsDialog(QtWidgets.QDialog):
         self.api_model_custom.setEnabled(is_custom)
 
 
+def normalize_base_url(url):
+    normalized = url.strip()
+    while normalized.endswith("/"):
+        normalized = normalized[:-1]
+    if normalized.endswith("/responses"):
+        normalized = normalized[: -len("/responses")]
+    return normalized
+
+
+def extract_output_text(output):
+    parts = []
+    for item in output or []:
+        content = item.get("content", [])
+        for content_item in content:
+            if content_item.get("type") == "output_text":
+                text = content_item.get("text", "")
+                if text:
+                    parts.append(text)
+    return "\n".join(parts)
+
+
 class LatexOCRWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.settings = AppSettings()
         self.signals = SignalBus()
+        self.http_session = requests.Session()
 
         self.setWindowTitle("LaTeXOCR for 415课题组")
         self.resize(1120, 620)
@@ -566,23 +593,24 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
             self.open_settings()
             return
 
-        buffer = QtCore.QBuffer()
-        buffer.open(QtCore.QIODevice.ReadWrite)
-        image.save(buffer, "PNG")
-        image_b64 = base64.b64encode(buffer.data()).decode("ascii")
-
         self._set_status("OCR in progress...")
         self.progress.setVisible(True)
 
         def worker():
+            buffer = QtCore.QBuffer()
+            buffer.open(QtCore.QIODevice.ReadWrite)
+            image.save(buffer, "JPG", quality=90)
+            image_b64 = base64.b64encode(buffer.data()).decode("ascii")
+            base_url = normalize_base_url(api_url)
+            request_url = f"{base_url}/responses"
             payload = {
                 "model": model,
-                "messages": [
+                "input": [
                     {
                         "role": "user",
                         "content": [
                             {
-                                "type": "text",
+                                "type": "input_text",
                                 "text": (
                                     "Please transcribe it into LaTeX format. "
                                     "please only return LaTeX formula without any "
@@ -591,10 +619,8 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
                                 ),
                             },
                             {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/png;base64,{image_b64}"
-                                },
+                                "type": "input_image",
+                                "image_url": f"data:image/jpeg;base64,{image_b64}",
                             },
                         ],
                     }
@@ -605,14 +631,12 @@ class LatexOCRWindow(QtWidgets.QMainWindow):
                 "Content-Type": "application/json",
             }
             try:
-                resp = requests.post(api_url, json=payload, headers=headers, timeout=60)
+                resp = self.http_session.post(
+                    request_url, json=payload, headers=headers, timeout=60
+                )
                 resp.raise_for_status()
                 data = resp.json()
-                latex = (
-                    data.get("choices", [{}])[0]
-                    .get("message", {})
-                    .get("content", "")
-                )
+                latex = extract_output_text(data.get("output", []))
                 latex = strip_latex_markers(latex)
                 self.signals.ocr_success.emit(latex)
             except Exception as exc:
