@@ -115,7 +115,7 @@ struct KaTeXView: NSViewRepresentable {
                     padding: 10px;
                     box-sizing: border-box;
                     text-align: center;
-                    color: #ffffff;
+                    color: #111111;
                 }
                 .katex-display {
                     margin: 0;
@@ -123,7 +123,12 @@ struct KaTeXView: NSViewRepresentable {
                     justify-content: center;
                 }
                 .katex {
-                    color: #ffffff;
+                    color: inherit;
+                }
+                @media (prefers-color-scheme: dark) {
+                    #formula {
+                        color: #f5f5f5;
+                    }
                 }
             </style>
         </head>

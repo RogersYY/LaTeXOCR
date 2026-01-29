@@ -64,19 +64,17 @@ class IdentifyProcess: ObservableObject {
         
         let requestBody: [String: Any] = [
             "model": config.model,
-            "messages": [
+            "input": [
                 [
                     "role": "user",
                     "content": [
                         [
-                            "type": "text",
+                            "type": "input_text",
                             "text": "Please transcribe it into LaTeX format. please only return LaTeX formula without any other unuseful symbol, so I can patse it to my doc directly."
                         ],
                         [
-                            "type": "image_url",
-                            "image_url": [
-                                "url": "data:image/jpeg;base64,\(imageBase64)"
-                            ]
+                            "type": "input_image",
+                            "image_url": "data:image/jpeg;base64,\(imageBase64)"
                         ]
                     ]
                 ]
@@ -115,11 +113,15 @@ class IdentifyProcess: ObservableObject {
                     return
                 }
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let choices = json["choices"] as? [[String: Any]],
-                   let firstChoice = choices.first,
-                   let message = firstChoice["message"] as? [String: Any],
-                   let content = message["content"] as? String {
-                    resultString = self.removeLatexMarkers(from: content)
+                   let output = json["output"] as? [[String: Any]] {
+                    let text = self.extractOutputText(from: output)
+                    if !text.isEmpty {
+                        resultString = self.removeLatexMarkers(from: text)
+                    } else {
+                        let message = "Unexpected API response."
+                        print(message)
+                        resultString = message
+                    }
                 } else {
                     let message = "Unexpected API response."
                     print(message)
@@ -136,6 +138,20 @@ class IdentifyProcess: ObservableObject {
         semaphore.wait()
         
         return resultString
+    }
+
+    private func extractOutputText(from output: [[String: Any]]) -> String {
+        var parts: [String] = []
+        for item in output {
+            guard let content = item["content"] as? [[String: Any]] else { continue }
+            for contentItem in content {
+                guard let type = contentItem["type"] as? String else { continue }
+                if type == "output_text", let text = contentItem["text"] as? String {
+                    parts.append(text)
+                }
+            }
+        }
+        return parts.joined(separator: "\n")
     }
     
     func removeLatexMarkers(from string: String) -> String {
@@ -182,12 +198,25 @@ class IdentifyProcess: ObservableObject {
             return nil
         }
         
-        guard let url = URL(string: urlString) else {
+        let normalizedUrlString = normalizeBaseURL(urlString)
+        guard let baseUrl = URL(string: normalizedUrlString) else {
             print("Invalid API URL in Settings.")
             return nil
         }
-        
+
+        let url = baseUrl.appendingPathComponent("responses")
         return (url, apiKey, model)
+    }
+
+    private func normalizeBaseURL(_ urlString: String) -> String {
+        var normalized = urlString
+        while normalized.hasSuffix("/") {
+            normalized.removeLast()
+        }
+        if normalized.hasSuffix("/responses") {
+            normalized = String(normalized.dropLast("/responses".count))
+        }
+        return normalized
     }
     
     func startScreenshotProcess() {

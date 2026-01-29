@@ -57,7 +57,7 @@ struct SettingsView: View {
                     Text("MathML(word)").tag("mathml")
                 }
                 .pickerStyle(.menu)
-                Text("请填写完整的请求地址，例如: https://your-host/v1/chat/completions")
+                Text("请填写到 /v1 即可，例如: https://api.openai.com/v1")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
