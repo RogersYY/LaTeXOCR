@@ -74,7 +74,7 @@ class IdentifyProcess: ObservableObject {
                         ],
                         [
                             "type": "input_image",
-                            "image_url": "data:image/jpeg;base64,\(imageBase64)"
+                            "image_url": "data:image/png;base64,\(imageBase64)"
                         ]
                     ]
                 ]
@@ -275,7 +275,7 @@ class IdentifyProcess: ObservableObject {
               let pngData = bitmapImage.representation(using: .png, properties: [:]) else {
             return nil
         }
-        return pngData.base64EncodedString(options: .lineLength64Characters)
+        return pngData.base64EncodedString()
     }
     func convertImageToLatex() {
         isLoading = true

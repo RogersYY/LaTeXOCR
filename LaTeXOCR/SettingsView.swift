@@ -16,6 +16,7 @@ struct SettingsView: View {
     @State private var showApiKey: Bool = false
     
     private let availableModels = [
+        "gpt-5.4",
         "gpt-5.2",
         "gpt-4.1-mini",
         "其他"
