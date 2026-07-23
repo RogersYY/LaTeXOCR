@@ -12,6 +12,7 @@ struct SettingsView: View {
     @AppStorage("apiKey") private var apiKey: String = ""
     @AppStorage("apiModel") private var apiModel: String = "gpt-5.2"
     @AppStorage("apiModelCustom") private var apiModelCustom: String = ""
+    @AppStorage("apiFormat") private var apiFormat: String = "responses"
     @AppStorage("copyFormat") private var copyFormat: String = "latex"
     @State private var showApiKey: Bool = false
     
@@ -53,6 +54,11 @@ struct SettingsView: View {
                     TextField("模型名称", text: $apiModelCustom)
                         .textFieldStyle(.roundedBorder)
                 }
+                Picker("接口格式", selection: $apiFormat) {
+                    Text("Response API").tag("responses")
+                    Text("Chat Completion API").tag("chat")
+                }
+                .pickerStyle(.menu)
                 Picker("自动复制格式", selection: $copyFormat) {
                     Text("LaTeX").tag("latex")
                     Text("MathML(word)").tag("mathml")
