@@ -61,26 +61,51 @@ class IdentifyProcess: ObservableObject {
         request.httpMethod = "POST"
         request.addValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let requestBody: [String: Any] = [
-            "model": config.model,
-            "input": [
-                [
-                    "role": "user",
-                    "content": [
-                        [
-                            "type": "input_text",
-                            "text": "Please transcribe it into LaTeX format. please only return LaTeX formula without any other unuseful symbol, so I can patse it to my doc directly."
-                        ],
-                        [
-                            "type": "input_image",
-                            "image_url": "data:image/jpeg;base64,\(imageBase64)"
+
+        let prompt = "Please transcribe it into LaTeX format. please only return LaTeX formula without any other unuseful symbol, so I can patse it to my doc directly."
+        let requestBody: [String: Any]
+        if config.format == "chat" {
+            requestBody = [
+                "model": config.model,
+                "messages": [
+                    [
+                        "role": "user",
+                        "content": [
+                            [
+                                "type": "text",
+                                "text": prompt
+                            ],
+                            [
+                                "type": "image_url",
+                                "image_url": [
+                                    "url": "data:image/png;base64,\(imageBase64)"
+                                ]
+                            ]
                         ]
                     ]
                 ]
             ]
-        ]
-        
+        } else {
+            requestBody = [
+                "model": config.model,
+                "input": [
+                    [
+                        "role": "user",
+                        "content": [
+                            [
+                                "type": "input_text",
+                                "text": prompt
+                            ],
+                            [
+                                "type": "input_image",
+                                "image_url": "data:image/png;base64,\(imageBase64)"
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        }
+
         request.httpBody = try? JSONSerialization.data(withJSONObject: requestBody)
         
         let semaphore = DispatchSemaphore(value: 0)
@@ -112,9 +137,15 @@ class IdentifyProcess: ObservableObject {
                     resultString = message
                     return
                 }
-                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                   let output = json["output"] as? [[String: Any]] {
-                    let text = self.extractOutputText(from: output)
+                if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    let text: String
+                    if config.format == "chat" {
+                        text = self.extractChatCompletionText(from: json)
+                    } else if let output = json["output"] as? [[String: Any]] {
+                        text = self.extractOutputText(from: output)
+                    } else {
+                        text = ""
+                    }
                     if !text.isEmpty {
                         resultString = self.removeLatexMarkers(from: text)
                     } else {
@@ -153,7 +184,23 @@ class IdentifyProcess: ObservableObject {
         }
         return parts.joined(separator: "\n")
     }
-    
+
+    private func extractChatCompletionText(from json: [String: Any]) -> String {
+        guard let choices = json["choices"] as? [[String: Any]],
+              let message = choices.first?["message"] as? [String: Any] else {
+            return ""
+        }
+        // content 通常是字符串，但也兼容分段数组形式
+        if let content = message["content"] as? String {
+            return content
+        }
+        if let contentParts = message["content"] as? [[String: Any]] {
+            let parts = contentParts.compactMap { $0["text"] as? String }
+            return parts.joined(separator: "\n")
+        }
+        return ""
+    }
+
     func removeLatexMarkers(from string: String) -> String {
         let pattern = "```latex\\n|```"
         let regex = try! NSRegularExpression(pattern: pattern, options: [])
@@ -177,7 +224,7 @@ class IdentifyProcess: ObservableObject {
         return string
     }
     
-    private func loadAPIConfig() -> (url: URL, apiKey: String, model: String)? {
+    private func loadAPIConfig() -> (url: URL, apiKey: String, model: String, format: String)? {
         let urlString = UserDefaults.standard.string(forKey: "apiBaseURL")?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let apiKey = UserDefaults.standard.string(forKey: "apiKey")?
@@ -187,25 +234,29 @@ class IdentifyProcess: ObservableObject {
         let customModel = UserDefaults.standard.string(forKey: "apiModelCustom")?
             .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let model = selectedModel == "其他" ? customModel : selectedModel
-        
+        let format = UserDefaults.standard.string(forKey: "apiFormat")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? "responses"
+        let apiFormat = format.isEmpty ? "responses" : format
+
         guard !urlString.isEmpty, !apiKey.isEmpty else {
             print("Missing API settings. Please configure them in Settings.")
             return nil
         }
-        
+
         if model.isEmpty {
             print("Missing model setting. Please configure it in Settings.")
             return nil
         }
-        
+
         let normalizedUrlString = normalizeBaseURL(urlString)
         guard let baseUrl = URL(string: normalizedUrlString) else {
             print("Invalid API URL in Settings.")
             return nil
         }
 
-        let url = baseUrl.appendingPathComponent("responses")
-        return (url, apiKey, model)
+        let path = apiFormat == "chat" ? "chat/completions" : "responses"
+        let url = baseUrl.appendingPathComponent(path)
+        return (url, apiKey, model, apiFormat)
     }
 
     private func normalizeBaseURL(_ urlString: String) -> String {
@@ -213,8 +264,11 @@ class IdentifyProcess: ObservableObject {
         while normalized.hasSuffix("/") {
             normalized.removeLast()
         }
-        if normalized.hasSuffix("/responses") {
-            normalized = String(normalized.dropLast("/responses".count))
+        for suffix in ["/responses", "/chat/completions"] {
+            if normalized.hasSuffix(suffix) {
+                normalized = String(normalized.dropLast(suffix.count))
+                break
+            }
         }
         return normalized
     }
@@ -275,7 +329,7 @@ class IdentifyProcess: ObservableObject {
               let pngData = bitmapImage.representation(using: .png, properties: [:]) else {
             return nil
         }
-        return pngData.base64EncodedString(options: .lineLength64Characters)
+        return pngData.base64EncodedString()
     }
     func convertImageToLatex() {
         isLoading = true
